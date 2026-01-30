@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
@@ -48,12 +48,82 @@ const mockPlaces = [
 
 export default function Index() {
   const [isRecording, setIsRecording] = useState(false);
+  const [transcript, setTranscript] = useState('');
+  const [finalTranscript, setFinalTranscript] = useState('');
+  const [isSupported, setIsSupported] = useState(true);
   const [userLevel] = useState(12);
   const [userXP] = useState(65);
   const [achievements] = useState(8);
+  const recognitionRef = useRef<any>(null);
+
+  useEffect(() => {
+    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    
+    if (!SpeechRecognition) {
+      setIsSupported(false);
+      return;
+    }
+
+    const recognition = new SpeechRecognition();
+    recognition.continuous = true;
+    recognition.interimResults = true;
+    recognition.lang = 'ru-RU';
+
+    recognition.onresult = (event: any) => {
+      let interimTranscript = '';
+      let finalText = '';
+
+      for (let i = event.resultIndex; i < event.results.length; i++) {
+        const transcriptPiece = event.results[i][0].transcript;
+        if (event.results[i].isFinal) {
+          finalText += transcriptPiece + ' ';
+        } else {
+          interimTranscript += transcriptPiece;
+        }
+      }
+
+      setTranscript(interimTranscript);
+      if (finalText) {
+        setFinalTranscript(prev => prev + finalText);
+      }
+    };
+
+    recognition.onerror = (event: any) => {
+      console.error('Speech recognition error:', event.error);
+      if (event.error === 'not-allowed') {
+        setIsSupported(false);
+      }
+      setIsRecording(false);
+    };
+
+    recognition.onend = () => {
+      setIsRecording(false);
+    };
+
+    recognitionRef.current = recognition;
+
+    return () => {
+      if (recognitionRef.current) {
+        recognitionRef.current.stop();
+      }
+    };
+  }, []);
 
   const handleVoiceClick = () => {
-    setIsRecording(!isRecording);
+    if (!isSupported) {
+      alert('Ваш браузер не поддерживает распознавание речи. Попробуйте Chrome или Edge.');
+      return;
+    }
+
+    if (isRecording) {
+      recognitionRef.current?.stop();
+      setIsRecording(false);
+    } else {
+      setTranscript('');
+      setFinalTranscript('');
+      recognitionRef.current?.start();
+      setIsRecording(true);
+    }
   };
 
   return (
@@ -116,7 +186,7 @@ export default function Index() {
             {isRecording && (
               <div className="mt-6 animate-fade-in">
                 <p className="text-primary font-semibold text-lg mb-2">🎤 Слушаю...</p>
-                <div className="flex justify-center gap-1">
+                <div className="flex justify-center gap-1 mb-4">
                   {[...Array(5)].map((_, i) => (
                     <div
                       key={i}
@@ -127,6 +197,29 @@ export default function Index() {
                       }}
                     />
                   ))}
+                </div>
+                {(transcript || finalTranscript) && (
+                  <div className="glass rounded-2xl p-4 max-w-lg mx-auto text-left">
+                    <p className="text-foreground">
+                      {finalTranscript}
+                      <span className="text-muted-foreground">{transcript}</span>
+                      <span className="inline-block w-0.5 h-5 bg-primary animate-pulse ml-1" />
+                    </p>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {!isRecording && finalTranscript && (
+              <div className="mt-6 animate-fade-in">
+                <div className="glass rounded-2xl p-4 max-w-lg mx-auto">
+                  <div className="flex items-start gap-3">
+                    <Icon name="MessageSquare" size={20} className="text-primary mt-1" />
+                    <div className="flex-1">
+                      <p className="text-sm text-muted-foreground mb-1">Ваш запрос:</p>
+                      <p className="text-foreground">{finalTranscript}</p>
+                    </div>
+                  </div>
                 </div>
               </div>
             )}
