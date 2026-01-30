@@ -13,7 +13,7 @@ const categories = [
   { id: 6, name: 'Кофейни', icon: 'Coffee', color: 'bg-amber-500', emoji: '☕' },
 ];
 
-const mockPlaces = [
+const allPlaces = [
   {
     id: 1,
     name: 'Сандуны',
@@ -23,6 +23,7 @@ const mockPlaces = [
     distance: '1.2 км',
     image: 'https://images.unsplash.com/photo-1540555700478-4be289fbecef?w=400',
     tags: ['Панорамный вид', 'Премиум'],
+    keywords: ['баня', 'баню', 'сауна', 'сандуны', 'вид', 'панорама'],
   },
   {
     id: 2,
@@ -33,6 +34,7 @@ const mockPlaces = [
     distance: '2.5 км',
     image: 'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=400',
     tags: ['Вид на город', 'Мишлен'],
+    keywords: ['ресторан', 'поесть', 'еда', 'кухня', 'вид', 'панорама', 'дорого', 'премиум'],
   },
   {
     id: 3,
@@ -43,6 +45,40 @@ const mockPlaces = [
     distance: '3.1 км',
     image: 'https://images.unsplash.com/photo-1566127444979-b3d2b654e3d7?w=400',
     tags: ['Русское искусство', 'Классика'],
+    keywords: ['музей', 'галерея', 'искусство', 'культура', 'третьяковка', 'картины'],
+  },
+  {
+    id: 4,
+    name: 'Кофемания',
+    category: 'Кофейни',
+    rating: 4.6,
+    price: '₽₽',
+    distance: '0.8 км',
+    image: 'https://images.unsplash.com/photo-1501339847302-ac426a4a7cbb?w=400',
+    tags: ['Завтраки', 'Wi-Fi'],
+    keywords: ['кофе', 'кофейня', 'завтрак', 'поработать', 'wifi', 'близко', 'рядом'],
+  },
+  {
+    id: 5,
+    name: 'Стрелка',
+    category: 'Коворкинги',
+    rating: 4.8,
+    price: '₽₽₽',
+    distance: '2.3 км',
+    image: 'https://images.unsplash.com/photo-1497366216548-37526070297c?w=400',
+    tags: ['Коворкинг', 'Терраса'],
+    keywords: ['коворкинг', 'работать', 'офис', 'место для работы', 'wi-fi', 'терраса'],
+  },
+  {
+    id: 6,
+    name: 'Дом Культуры',
+    category: 'Концерты',
+    rating: 4.7,
+    price: '₽₽',
+    distance: '1.9 км',
+    image: 'https://images.unsplash.com/photo-1501386761578-eac5c94b800a?w=400',
+    tags: ['Живая музыка', 'Бар'],
+    keywords: ['концерт', 'музыка', 'живая музыка', 'выступление', 'бар', 'вечер'],
   },
 ];
 
@@ -54,7 +90,32 @@ export default function Index() {
   const [userLevel] = useState(12);
   const [userXP] = useState(65);
   const [achievements] = useState(8);
+  const [filteredPlaces, setFilteredPlaces] = useState(allPlaces.slice(0, 3));
+  const [searchApplied, setSearchApplied] = useState(false);
   const recognitionRef = useRef<any>(null);
+
+  const analyzeQuery = (query: string) => {
+    const lowerQuery = query.toLowerCase();
+    
+    const matches = allPlaces.filter(place => {
+      const categoryMatch = place.category.toLowerCase().includes(lowerQuery) || 
+                           lowerQuery.includes(place.category.toLowerCase());
+      const keywordMatch = place.keywords.some(keyword => 
+        lowerQuery.includes(keyword) || keyword.includes(lowerQuery)
+      );
+      const nameMatch = place.name.toLowerCase().includes(lowerQuery);
+      
+      return categoryMatch || keywordMatch || nameMatch;
+    });
+
+    if (matches.length > 0) {
+      setFilteredPlaces(matches);
+      setSearchApplied(true);
+    } else {
+      setFilteredPlaces(allPlaces.slice(0, 3));
+      setSearchApplied(false);
+    }
+  };
 
   useEffect(() => {
     const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
@@ -109,6 +170,12 @@ export default function Index() {
     };
   }, []);
 
+  useEffect(() => {
+    if (!isRecording && finalTranscript) {
+      analyzeQuery(finalTranscript);
+    }
+  }, [isRecording, finalTranscript]);
+
   const handleVoiceClick = () => {
     if (!isSupported) {
       alert('Ваш браузер не поддерживает распознавание речи. Попробуйте Chrome или Edge.');
@@ -121,9 +188,15 @@ export default function Index() {
     } else {
       setTranscript('');
       setFinalTranscript('');
+      setSearchApplied(false);
       recognitionRef.current?.start();
       setIsRecording(true);
     }
+  };
+
+  const handleQuickSearch = (query: string) => {
+    setFinalTranscript(query);
+    analyzeQuery(query);
   };
 
   return (
@@ -225,14 +298,26 @@ export default function Index() {
             )}
 
             <div className="mt-8 flex flex-wrap justify-center gap-2">
-              <Badge variant="outline" className="cursor-pointer hover:bg-primary/20 transition-colors">
+              <Badge 
+                variant="outline" 
+                className="cursor-pointer hover:bg-primary/20 transition-colors"
+                onClick={() => handleQuickSearch('Найти баню с видом')}
+              >
                 Найти баню с видом
               </Badge>
-              <Badge variant="outline" className="cursor-pointer hover:bg-primary/20 transition-colors">
+              <Badge 
+                variant="outline" 
+                className="cursor-pointer hover:bg-primary/20 transition-colors"
+                onClick={() => handleQuickSearch('Ресторан рядом')}
+              >
                 Ресторан рядом
               </Badge>
-              <Badge variant="outline" className="cursor-pointer hover:bg-primary/20 transition-colors">
-                Что открыто сейчас?
+              <Badge 
+                variant="outline" 
+                className="cursor-pointer hover:bg-primary/20 transition-colors"
+                onClick={() => handleQuickSearch('кофейня')}
+              >
+                Кофейня поблизости
               </Badge>
             </div>
           </div>
@@ -263,13 +348,26 @@ export default function Index() {
 
         <div>
           <div className="flex items-center justify-between mb-6">
-            <h3 className="text-2xl font-bold">Популярные места</h3>
+            <h3 className="text-2xl font-bold">
+              {searchApplied ? `Найдено мест: ${filteredPlaces.length}` : 'Популярные места'}
+            </h3>
             <button className="text-primary hover:text-primary/80 transition-colors flex items-center gap-1">
               Показать на карте <Icon name="Map" size={20} />
             </button>
           </div>
+          {searchApplied && finalTranscript && (
+            <div className="mb-6 glass rounded-2xl p-4 animate-fade-in">
+              <div className="flex items-center gap-3">
+                <Icon name="Search" size={20} className="text-primary" />
+                <div>
+                  <p className="text-sm text-muted-foreground">Результаты по запросу:</p>
+                  <p className="font-semibold">{finalTranscript}</p>
+                </div>
+              </div>
+            </div>
+          )}
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {mockPlaces.map((place, index) => (
+            {filteredPlaces.map((place, index) => (
               <Card
                 key={place.id}
                 className="glass overflow-hidden cursor-pointer hover:scale-105 transition-all duration-300 animate-fade-in"
