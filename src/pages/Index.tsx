@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
@@ -83,6 +84,7 @@ const allPlaces = [
 ];
 
 export default function Index() {
+  const navigate = useNavigate();
   const [isRecording, setIsRecording] = useState(false);
   const [transcript, setTranscript] = useState('');
   const [finalTranscript, setFinalTranscript] = useState('');
@@ -372,6 +374,7 @@ export default function Index() {
                 key={place.id}
                 className="glass overflow-hidden cursor-pointer hover:scale-105 transition-all duration-300 animate-fade-in"
                 style={{ animationDelay: `${index * 0.15}s` }}
+                onClick={() => navigate(`/place?id=${place.id}`)}
               >
                 <div className="relative h-48 overflow-hidden">
                   <img
